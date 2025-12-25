@@ -96,6 +96,7 @@ function performUnitOfWork(fiber) {
 
 let nextUnitOfWork = null;
 
+// workLoop会无限的执行下去，但并不是递归调用，本次的nextUnitOfWork执行完成之后并且没有空闲时间时，workLoop会出栈，全局变量nextUnitOfWork会保存下次要执行的fiber
 function workLoop(deadline) {
   // 首次执行 shouldYield为false 也就是根元素和他的子元素必然会被处理
   let shoudYield = false;
