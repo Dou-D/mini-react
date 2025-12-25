@@ -44,11 +44,12 @@ function render(element, container) {
     dom: container,
     props: {
       children: [element],
-    },
-  };
+    }
+  }
 }
 
 function performUnitOfWork(fiber) {
+  // 开始处理某个fiber时，才创建他的真实dom，否则它一直作为vdom保存
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
   }
@@ -62,13 +63,14 @@ function performUnitOfWork(fiber) {
   let prevSibling = null;
   while (index < elements.length) {
     const element = elements[index];
+
     const newFiber = {
       type: element.type,
       props: element.props,
       parent: fiber,
       dom: null,
     };
-    if (index == 0) {
+    if (index === 0) {
       fiber.child = newFiber;
     } else {
       prevSibling.sibling = newFiber;
@@ -76,19 +78,33 @@ function performUnitOfWork(fiber) {
     prevSibling = newFiber;
     index++;
   }
+  // 有孩子的话 优先遍历孩子 类似树的先根遍历
   if (fiber.child) {
     return fiber.child;
+  }
+
+  let nextFiber = fiber;
+  // 遍历完孩子后，先找兄弟，完成第一个兄弟及其孩子的遍历 然后第一个兄弟的会找它的第一个兄弟 依次找完为止
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling;
+    }
+    // 找父节点的兄弟
+    nextFiber = nextFiber.parent;
   }
 }
 
 let nextUnitOfWork = null;
 
 function workLoop(deadline) {
+  // 首次执行 shouldYield为false 也就是根元素和他的子元素必然会被处理
   let shoudYield = false;
   while (nextUnitOfWork && !shoudYield) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+    // 检查是否有剩余时间
     shoudYield = deadline.timeRemaining() < 1;
   }
+  // 将任务放到下一帧执行
   requestIdleCallback(workLoop);
 }
 
